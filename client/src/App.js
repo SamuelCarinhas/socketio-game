@@ -1,26 +1,70 @@
 import React, { useRef, useEffect, useState } from 'react';
+import { io } from 'socket.io-client';
 import './App.css';
 import Game from './game';
 
+let socket;
+const CONNECTION_STRING = 'localhost:4001';
+
 function App() {
 
-  let playerName = '';
-  let game = new Game(500, 500, 20);
+  let [playerName, setPlayerName] = useState('');
+  let [game, setGame] = useState(new Game(500, 500, 20));
   const canvasRef = useRef(null);
 
-  const draw = (ctx) => {
+  const updateCanvas = (ctx) => {
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-    ctx.fillStyle = 'gold';
-    Object.keys(game.players).map(playerName => {
-      let player = game.players[playerName];
+    Object.keys(game.players).map(playerN => {
+      if(playerName === playerN) ctx.fillStyle = 'gold';
+      else ctx.fillStyle = 'black';
+      let player = game.players[playerN];
       ctx.fillRect(player.x, player.y, game.playerSize, game.playerSize);
+      return playerN;
     })
   }
 
   useEffect(() => {
+    socket = io(CONNECTION_STRING);
+    socket.on('connect', () => {
+      playerName = socket.id;
+      setPlayerName(socket.id);
+      socket.on('addPlayer', (command) => {
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext('2d');
+        game.addPlayer(command.args);
+        updateCanvas(ctx);
+      });
+  
+      socket.on('disconnectPlayer', (command) => {
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext('2d');
+        game.removePlayer(command.args);
+        updateCanvas(ctx);
+      })
+  
+      socket.on('setup', (config) => {
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext('2d');
+        for(let player of config.players) {
+          game.addPlayer(player);
+        }
+        updateCanvas(ctx);
+      });
+
+      socket.on('updatePlayer', (command) => {
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext('2d');
+        game.updatePlayer(command.args.playerName, command.args.x, command.args.y);
+        updateCanvas(ctx);
+      })
+    })
+
+  }, [])
+  
+  useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
-    
+
     const movement = (e) => {
       let player = game.getPlayer(playerName);
       if(e.keyCode === 37) { // LEFT
@@ -30,22 +74,23 @@ function App() {
         game.updatePlayer(playerName, player.x, Math.max(0, player.y - game.playerSize));
       }
       if(e.keyCode === 39) { // RIGHT
-        game.updatePlayer(playerName, Math.min(ctx.canvas.width - game.playerSize, player.x + game.playerSize), player.y);
+        game.updatePlayer(playerName, Math.min(game.width - game.playerSize, player.x + game.playerSize), player.y);
       }
       if(e.keyCode === 40) { // DOWN
-        game.updatePlayer(playerName, player.x, Math.min(ctx.canvas.height - game.playerSize, player.y + game.playerSize));
+        game.updatePlayer(playerName, player.x, Math.min(game.height - game.playerSize, player.y + game.playerSize));
       }
-      draw(ctx);
+      socket.emit('updatePlayer', game.getPlayer(playerName));
+      updateCanvas(ctx);
     }
 
     window.addEventListener('keydown', movement);
 
-    draw(ctx);
+    updateCanvas(ctx);
 
     return () => {
       window.removeEventListener('keydown', movement);
     }
-  }, [draw]);
+  }, [game, playerName]);
 
   return (
     <div className="main">
