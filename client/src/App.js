@@ -4,7 +4,7 @@ import Game from './game';
 
 function App() {
 
-  let playerName = 'ColdAtom';
+  let playerName = '';
   let game = new Game(500, 500, 20);
   const canvasRef = useRef(null);
 
@@ -25,11 +25,14 @@ function App() {
       let player = game.getPlayer(playerName);
       if(e.keyCode === 37) { // LEFT
         game.updatePlayer(playerName, Math.max(0, player.x - game.playerSize), player.y);
-      } else if(e.keyCode === 38) { // UP
+      }
+      if(e.keyCode === 38) { // UP
         game.updatePlayer(playerName, player.x, Math.max(0, player.y - game.playerSize));
-      } else if(e.keyCode === 39) { // RIGHT
+      }
+      if(e.keyCode === 39) { // RIGHT
         game.updatePlayer(playerName, Math.min(ctx.canvas.width - game.playerSize, player.x + game.playerSize), player.y);
-      } else if(e.keyCode === 40) { // DOWN
+      }
+      if(e.keyCode === 40) { // DOWN
         game.updatePlayer(playerName, player.x, Math.min(ctx.canvas.height - game.playerSize, player.y + game.playerSize));
       }
       draw(ctx);

@@ -4,12 +4,7 @@ export default class Game {
         this.width = width;
         this.height = height;
         this.playerSize = playerSize;
-        this.players = {
-            'ColdAtom': {
-                x: 0,
-                y: 0
-            }
-        };
+        this.players = {};
     }
 
     getPlayer(playerName) {
